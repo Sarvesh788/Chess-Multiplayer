@@ -1,128 +1,79 @@
 import pygame
-import sys
-from Player import Player
+import chess
+from Board import Board
 
-WIDTH, HEIGHT = 800, 800
-ROWS, COLS = 8, 8 
-SQUARE_SIZE = WIDTH // COLS
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-p1 = Player("white")
-p2 = Player("black")
-
+# Initialize Pygame and the chess board
 pygame.init()
+screen = pygame.display.set_mode((800, 800))
+pygame.display.set_caption("Chess Game with Mouse Interaction")
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Chess Board with Pieces")
+# Constants
+SQUARE_SIZE = 100
+PIECE_SIZE = SQUARE_SIZE // 2
+FPS = 30
 
-pieces_black = {
-    "b_king": pygame.image.load("chess_maestro_bw/bk.png").convert_alpha(),
-    "b_queen": pygame.image.load("chess_maestro_bw/bq.png").convert_alpha(),
-    "b_bishop": pygame.image.load("chess_maestro_bw/bb.png").convert_alpha(),
-    "b_knight": pygame.image.load("chess_maestro_bw/bn.png").convert_alpha(),
-    "b_rook": pygame.image.load("chess_maestro_bw/br.png").convert_alpha(),
-    "b_pawn": pygame.image.load("chess_maestro_bw/bp.png").convert_alpha(),
-}
+# Load piece images (using PNG files)
+piece_images = {}
+piece_types = ['p', 'r', 'n', 'b', 'q', 'k']
+for color in ['w', 'b']:  # 'w' for white, 'b' for black
+    for piece in piece_types:
+        image_file = f'alpha/{color}{piece}.svg'  # Load PNG images
+        image = pygame.image.load(image_file)
+        scaled_image = pygame.transform.smoothscale(image, (SQUARE_SIZE // 1.5, SQUARE_SIZE // 1.5))
+        piece_images[color + piece] = scaled_image
 
-pieces_white = {
-    "w_king": pygame.image.load("chess_maestro_bw/wk.png").convert_alpha(),
-    "w_queen": pygame.image.load("chess_maestro_bw/wq.png").convert_alpha(),
-    "w_bishop": pygame.image.load("chess_maestro_bw/wb.png").convert_alpha(),
-    "w_knight": pygame.image.load("chess_maestro_bw/wn.png").convert_alpha(),
-    "w_rook": pygame.image.load("chess_maestro_bw/wr.png").convert_alpha(),
-    "w_pawn": pygame.image.load("chess_maestro_bw/wp.png").convert_alpha(),
-}
+board = Board()
 
-
-for key in pieces_white:
-    pieces_white[key] = pygame.transform.scale(pieces_white[key], (SQUARE_SIZE, SQUARE_SIZE))
-
-for key in pieces_black:
-    pieces_black[key] = pygame.transform.scale(pieces_black[key], (SQUARE_SIZE, SQUARE_SIZE))
-
-piece_positions = {
-    "b_king": p2.get_king_pos(), 
-    "b_queen": p2.get_queen_pos(),
-    "w_king": p1.get_king_pos(),
-    "w_queen": p1.get_queen_pos(),
-    "b_bishop": p2.get_bishop_pos(),
-    "b_knight": p2.get_knight_pos(),
-    "b_rook": p2.get_rook_pos(),
-    "w_bishop": p1.get_bishop_pos(),
-    "w_knight": p1.get_knight_pos(),
-    "w_rook": p1.get_rook_pos(),
-    "b_pawn": p2.get_pawn_pos(),
-    "w_pawn": p1.get_pawn_pos()
-}
-
+# Draw the chessboard
 def draw_board():
-    for row in range(ROWS):
-        for col in range(COLS):
-            color = WHITE if (row + col) % 2 == 0 else BLACK
-            pygame.draw.rect(screen, color, (col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+    colors = [pygame.Color("#f6ffe3"), pygame.Color("#81b64c")]
+    for rank in range(8):
+        for file in range(8):
+            color = colors[(rank + file) % 2]
+            pygame.draw.rect(screen, color, pygame.Rect(file * SQUARE_SIZE, rank * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
 
-def draw_pieces():
-    for piece, positions in piece_positions.items():
-        if isinstance(positions, list):
-            for pos in positions:
-                col, row = pos
-                if piece.startswith("w_"):
-                    screen.blit(pieces_white[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
-                elif piece.startswith("b_"):
-                    screen.blit(pieces_black[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
-        else:
-            col, row = positions
-            if piece.startswith("w_"):
-                screen.blit(pieces_white[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
-            elif piece.startswith("b_"):
-                screen.blit(pieces_black[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
+# Draw the chess pieces
+def draw_pieces(board):
+    for square in board.get_squares():
+        piece = board.piece_at(square)
+        if piece:
+            piece_image = piece_images[f"{'w' if piece.color == True else 'b'}{piece.symbol().lower()}"]
+            row, col = divmod(square, 8)
+            x = col * SQUARE_SIZE + (SQUARE_SIZE - PIECE_SIZE) // 2
+            y = (7 - row) * SQUARE_SIZE + (SQUARE_SIZE - PIECE_SIZE) // 2
+            screen.blit(piece_image, pygame.Rect(x, y, PIECE_SIZE, PIECE_SIZE))
 
-
-def move_piece(piece, new_col, new_row, index):
-    print(piece, new_col, new_row, index)
-    if index is None:
-        piece_positions[piece] = (new_col, new_row)
-    else:
-        piece_positions[piece][index] = (new_col, new_row)
+def get_square_under_mouse(pos):
+    x, y = pos
+    row = 7 - (y // SQUARE_SIZE)
+    col = x // SQUARE_SIZE
+    return chess.square(col, row)
 
 def main():
-    selected_piece = None  
+    clock = pygame.time.Clock()
+    selected_square = None
     running = True
     while running:
+        draw_board()
+        draw_pieces(board)
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-                pygame.quit()
-                sys.exit()
-
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                mouse_x, mouse_y = pygame.mouse.get_pos()
-                col = mouse_x // SQUARE_SIZE
-                row = mouse_y // SQUARE_SIZE
-
-                for piece in piece_positions.items():
-                    if isinstance(piece[1], list):
-                        for pos in piece[1]:
-                            if pos == (col, row):
-                                selected_piece = piece[0]
-                                index = piece[1].index(pos)
-                    else:
-                        if piece[1] == (col, row):
-                            selected_piece = piece[0]
-                            index = None
-                        
-
-            elif event.type == pygame.MOUSEBUTTONUP and selected_piece:
-                mouse_x, mouse_y = pygame.mouse.get_pos()
-                new_col = mouse_x // SQUARE_SIZE
-                new_row = mouse_y // SQUARE_SIZE
-                move_piece(selected_piece, new_col, new_row, index)
-                selected_piece = None
-
-        draw_board()
-        draw_pieces()
+                selected_square = get_square_under_mouse(event.pos)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if selected_square is not None:
+                    target_square = get_square_under_mouse(event.pos)
+                    move = chess.Move(selected_square, target_square)
+                    print(move)
+                    board.move(move.uci())
+                    selected_square = None
+        
         pygame.display.flip()
+        clock.tick(FPS)
+
+    pygame.quit()
 
 if __name__ == "__main__":
     main()
-

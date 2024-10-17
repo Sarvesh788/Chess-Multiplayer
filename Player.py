@@ -73,6 +73,11 @@ class Player:
     def get_pawn_pos(self):
         return [i.get_position() for i in self.p]
 
+    def move(self, board, move):
+        board.push(move)
+        print(board)
+
+
 
 
 

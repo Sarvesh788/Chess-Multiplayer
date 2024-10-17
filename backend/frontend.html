@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chess Multiplayer</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>Chess Multiplayer</h1>
+    <button onclick="joinGame()">Join Game</button>
+    <button onclick="makeMove()">Make Move</button>
+
+    <script>
+      var socket = io.connect('http://localhost:5000');  // Connect to your backend
+
+      function joinGame() {
+        const game_id = "chess-game-123";  // Example game ID
+        const username = "Player1";
+        socket.emit('join_game', { game_id: game_id, username: username });
+      }
+
+      function makeMove() {
+        const game_id = "chess-game-123";  // Example game ID
+        const move = "e2-e4";  // Example move
+        socket.emit('move', { game_id: game_id, move: move });
+      }
+
+      // Listen for move updates
+      socket.on('move', function(data) {
+        console.log("Move made: " + data.move);
+      });
+
+      // Listen for status updates
+      socket.on('status', function(data) {
+        console.log(data.msg);
+      });
+    </script>
+  </body>
+</html>

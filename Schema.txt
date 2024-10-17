@@ -1,0 +1,17 @@
+Game
+Attributes:
+Board b
+Player p1, p2
+isMulitplayer
+Player current
+Moves m
+
+Methods:
+startgame()
+playmove()
+switchtime()
+checkgamestate()
+resetgame()
+undo()
+redo()
+
